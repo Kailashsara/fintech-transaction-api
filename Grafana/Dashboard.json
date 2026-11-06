@@ -1,0 +1,24 @@
+{
+  "title": "FinTech Transaction Gateway",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Transaction Throughput",
+      "targets": [
+        {
+          "expr": "rate(transactions_total[1m])",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "Average Latency (ms)",
+      "targets": [
+        {
+          "expr": "rate(transaction_processing_seconds_sum[1m]) / rate(transaction_processing_seconds_count[1m]) * 1000"
+        }
+      ]
+    }
+  ]
+}
