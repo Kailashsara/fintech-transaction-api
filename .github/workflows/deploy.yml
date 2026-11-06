@@ -6,32 +6,35 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v4
     
     - name: Build Docker Image
       run: docker build -t fintech-api:${{ github.sha }} .
       
     - name: Set up Kubernetes (KinD)
-      uses: engineerd/setup-kind@v0.5.0
+      uses: helm/kind-action@v1.10.0
+      with:
+        cluster_name: kind
       
     - name: Load Image into KinD
-      run: kind load docker-image fintech-api:${{ github.sha }}
+      run: kind load docker-image fintech-api:${{ github.sha }} --name kind
       
     - name: Deploy to K8s
       run: |
-        # 1. Create namespace safely
+        # Create namespace safely
         kubectl create namespace fintech-payments --dry-run=client -o yaml | kubectl apply -f -
         
-        # 2. Apply RBAC (which now includes the ServiceAccount)
+        # Apply RBAC 
         kubectl apply -f kubernetes/rbac.yaml
         
-        # 3. Inject the specific commit SHA into the deployment manifest
+        # Inject the specific commit SHA into the deployment manifest
         sed -i "s/fintech-api:latest/fintech-api:${{ github.sha }}/g" kubernetes/deployment.yaml
         
-        # 4. Deploy the app
+        # Deploy the app
         kubectl apply -f kubernetes/deployment.yaml
         
-        # 5. Wait for pods to be ready (fails the build if it crashes)
+        # Wait for pods to be ready (fails the build if it crashes)
         kubectl rollout status deployment/fintech-api -n fintech-payments
