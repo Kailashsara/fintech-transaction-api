@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fintech-api
+  namespace: fintech-payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fintech-api
+  template:
+    metadata:
+      labels:
+        app: fintech-api
+    spec:
+      containers:
+      - name: fintech-api
+        image: fintech-api:latest
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fintech-api-service
+  namespace: fintech-payments
+spec:
+  selector:
+    app: fintech-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
