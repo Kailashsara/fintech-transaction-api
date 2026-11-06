@@ -1,18 +1,33 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
+from prometheus_client import make_asgi_app, Counter, Histogram
+import random
+import time
 
-from app import classifier_router
-from app.monitoring import instrumentator
+app = FastAPI(title="FinTech Transaction Scoring API")
 
-app = FastAPI()
-app.include_router(classifier_router.router)
-instrumentator.instrument(app).expose(app, include_in_schema=False, should_gzip=True)
+# Prometheus Metrics
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
+TRANSACTION_COUNT = Counter('transactions_total', 'Total transactions processed', ['status'])
+PROCESSING_TIME = Histogram('transaction_processing_seconds', 'Time spent processing transaction')
 
-@app.get("/")
-async def root():
-    return "Sentiment Classifier (0 -> Negative and 1 -> Positive)"
+class PaymentRequest(BaseModel):
+    card_id: str
+    amount: float
 
-
-@app.get("/healthcheck", status_code=200)
-async def healthcheck():
-    return "dummy check! Classifier is all ready to go!"
+@app.post("/process-payment")
+def process_payment(request: PaymentRequest):
+    start_time = time.time()
+    
+    # Simulate processing delay
+    time.sleep(random.uniform(0.01, 0.1))
+    
+    # Mock approval logic
+    status = "approved" if random.random() > 0.1 else "declined"
+    
+    TRANSACTION_COUNT.labels(status=status).inc()
+    PROCESSING_TIME.observe(time.time() - start_time)
+    
+    return {"status": status, "transaction_amount": request.amount}
