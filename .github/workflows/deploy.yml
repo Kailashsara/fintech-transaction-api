@@ -16,9 +16,22 @@ jobs:
     - name: Set up Kubernetes (KinD)
       uses: engineerd/setup-kind@v0.5.0
       
+    - name: Load Image into KinD
+      run: kind load docker-image fintech-api:${{ github.sha }}
+      
     - name: Deploy to K8s
       run: |
+        # 1. Create namespace safely
+        kubectl create namespace fintech-payments --dry-run=client -o yaml | kubectl apply -f -
+        
+        # 2. Apply RBAC (which now includes the ServiceAccount)
         kubectl apply -f kubernetes/rbac.yaml
-        # Create namespace manually for CI purposes
-        kubectl create namespace fintech-payments 
+        
+        # 3. Inject the specific commit SHA into the deployment manifest
+        sed -i "s/fintech-api:latest/fintech-api:${{ github.sha }}/g" kubernetes/deployment.yaml
+        
+        # 4. Deploy the app
         kubectl apply -f kubernetes/deployment.yaml
+        
+        # 5. Wait for pods to be ready (fails the build if it crashes)
+        kubectl rollout status deployment/fintech-api -n fintech-payments
