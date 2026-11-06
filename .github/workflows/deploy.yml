@@ -10,13 +10,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        
-    - name: Run Tests (Mock)
-      run: echo "All FinTech transaction logic tests passed."
-      
     - name: Build Docker Image
       run: docker build -t fintech-api:${{ github.sha }} .
+      
+    - name: Set up Kubernetes (KinD)
+      uses: engineerd/setup-kind@v0.5.0
+      
+    - name: Deploy to K8s
+      run: |
+        kubectl apply -f kubernetes/rbac.yaml
+        # Create namespace manually for CI purposes
+        kubectl create namespace fintech-payments 
+        kubectl apply -f kubernetes/deployment.yaml
